@@ -1,8 +1,5 @@
 #!/usr/bin/perl
 use uni::perl;
-# $Id: test.pl,v 1.1.1.1 2000/09/05 08:55:38 artur Exp $
-#
-
 use Data::Dumper;
 
 my $loaded = 1;

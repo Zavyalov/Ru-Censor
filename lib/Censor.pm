@@ -1,8 +1,6 @@
-package Censure;
+package Censor;
+use uni::perl;
 
-use utf8;
-#use strict;
-# с 27.09.2000 список @slang не ведется!
 use vars qw($VERSION @EXPORT @ISA @slang_common %hslang);
 
 use locale;
