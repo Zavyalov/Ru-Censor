@@ -1,4 +1,5 @@
 package Censor;
+# vim:foldmethod=marker:foldmarker={{,}}
 use vars qw($VERSION @EXPORT @ISA @slang_common %hslang);
 use uni::perl;
 
@@ -20,10 +21,9 @@ my %FLAGS = (
     need_all_word   => 0,
 );
 
-#**************************************#
-#-------------- данные ----------------#
-#**************************************#
-
+########################################
+#              данные
+# smiles           улыбки {{
 my @smiles = (
     "(\\\(\\\-?[:8])|(\\\(:[\\\|I!1])",
     "([3\\\[]:[\\\[\\\]])|([KК]:[PР])",
@@ -37,8 +37,8 @@ my @smiles = (
     "[:8]-?[\\\[#\\\)\\\{\\\~][\\\]\\\)XХ\\\~\\\}]",
     "[\\\(\\\*\\\+:CСEЕ][:<\\\-=][\\\-:\\\)]-[<\\\)\\\|I8]",
     "([:8]-[\\\(\\\{][#=][\\\)\\\}])|([\\\(<][:8]-[\\\|\\\)][KК<][\\\-<]?\\\|?)|(<\\\{[:8]-\\\)\\\})"
-);
-
+); # }}
+# word_change      замены {{
 my %word_change = (
     "automobile"    => [
         "запорожец",
@@ -66,8 +66,8 @@ my %word_change = (
         "геацинт",
         "незабудка"
     ]
-);
-
+); # }}
+# norm_word        не мат {{
 my %norm_word = (
     "а"        => [
         "амеб",
@@ -339,8 +339,8 @@ my %norm_word = (
         "яблонский",
         "ястреб"
     ]
-);
-
+); # }}
+# core_mask        основной  мат {{
 my %core_mask = (
     "бзд"   => "бзд",
     "бля"   => "(б[\#+еи]?л[у\#+]?я)|(блиад)|(бл[еи]д[иу])|([кю]ляд)|([бп][и]?л[ая][дт]ь\$)|(билат.?\$)",
@@ -368,8 +368,8 @@ my %core_mask = (
     "хуй#2" => "(^а[\#+]?ху\$)|(ахай)|(х[ао]й[дл])|(куй)|(м[\#+у]йня)|(х[\#+]?н[еюя])|(^х[еийыюя]\$)",
     "член"  => "члено((вид)|(воз)|(гл)|(мет)|(ног)|(прием)|(сос)|(под))",
     "япуч"  => "япуч"
-);
-
+); # }}
+# hslang           остальной мат{{
 my %hslang = (
     "1"        => [
         "^14[\\d]*.?.?[з]?д[аы]",
@@ -1012,7 +1012,7 @@ my %hslang = (
         "^ютит([\#+ъь]?)|(!(с))",
         "^юхан"
     ]
-);
+); # }}
 
 # Возвращает true если слово нецензурное, иначе false
 sub slangControl {
@@ -1026,12 +1026,11 @@ sub slangControl {
 
 # Возвращает слово которое считается нецензурным
 sub slangControl_wd {
-    my @out = @_;
-
+    my @out   = @_;
     my @isBad = slangControl_ar(@out);
 
     if ($FLAGS{oneword}) { return $isBad[0];              }
-    else          { return map { $_->[0] } @isBad; }
+    else                 { return map { $_->[0] } @isBad; }
 }
 
 sub slangControl_change {
@@ -1039,8 +1038,9 @@ sub slangControl_change {
 
     local $FLAGS{oneword}       = 0;
     local $FLAGS{need_all_word} = 1;
-    my @isBad            = slangControl_ar(@out);
-    my $nr               = @{$word_change{$FLAGS{change_type}}};
+
+    my @isBad = slangControl_ar(@out);
+    my $nr    = @{$word_change{$FLAGS{change_type}}};
 
     for my $i ( 0..$#isBad ) {
         next if $isBad[$i][1] eq '';
@@ -1113,9 +1113,7 @@ sub slangControl_ar {
                     $w4 = "";
                     if ($w3 eq $w2) {
                         $w3 = "";
-                        if ($w2 eq $w1) {
-                            $w2 = "";
-                        }
+                        $w2 = "" if $w2 eq $w1;
                     }
                 }
                 push(@w, [$wo, $w1, $w2, $w3, $w4]);
