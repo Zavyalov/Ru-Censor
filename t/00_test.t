@@ -5,7 +5,7 @@ use Data::Dumper;
 my $loaded = 1;
 BEGIN { $| = 1; print "1..5\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use Censure;
+use Censor;
 print "ok 1\n";
 
 my ($w,@w);
