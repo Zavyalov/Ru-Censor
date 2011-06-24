@@ -1,24 +1,24 @@
 package Censor;
-use uni::perl;
-
 use vars qw($VERSION @EXPORT @ISA @slang_common %hslang);
-
-use locale;
+use uni::perl;
 
 require Exporter;
 
 @ISA = qw(Exporter);
-@EXPORT = qw(slangControl slangControl_wd slangControl_ar
-slangLoadDict setDictHash setOneWord
-setChangeType slangControl_change);
-$VERSION = '0.051.02';
+@EXPORT = qw(
+    slangControl slangControl_wd slangControl_ar slangLoadDict slangControl_change
+    setDictHash setOneWord setChangeType
+);
+$VERSION = '0.100';
 
-my $oneword = 1;
-my $change_type = "beep";
+my %FLAGS = (
+    oneword         => 1,
+    change_type     => 'beep',
 
-# для замены матов нужно возвращать весь входной список, где для нормальных
-#  слов вместо маски будет установлено пустое значение ""
-my $need_all_word = 0;
+    # для замены матов нужно возвращать весь входной список, где для нормальных
+    # слов вместо маски будет установлено пустое значение ""
+    need_all_word   => 0,
+);
 
 #**************************************#
 #-------------- данные ----------------#
@@ -1015,76 +1015,49 @@ my %hslang = (
 );
 
 # Возвращает true если слово нецензурное, иначе false
-sub slangControl (@) {
+sub slangControl {
     my @out = @_;
+    local $FLAGS{oneword} = 1;
 
-    setOneWord(1);
     my @isBad = slangControl_ar(@out);
 
     return defined($isBad[0]) ? 1 : 0;
 }
 
 # Возвращает слово которое считается нецензурным
-sub slangControl_wd (@) {
+sub slangControl_wd {
     my @out = @_;
 
     my @isBad = slangControl_ar(@out);
 
-    if ($oneword) { return $isBad[0]; }
-    else { return map { $_->[0] } @isBad; }
+    if ($FLAGS{oneword}) { return $isBad[0];              }
+    else          { return map { $_->[0] } @isBad; }
 }
 
-sub slangControl_change (@)
-{
+sub slangControl_change {
     my @out = @_;
 
-    my $cow = setOneWord();
-    setOneWord(0);
+    local $FLAGS{oneword}       = 0;
+    local $FLAGS{need_all_word} = 1;
+    my @isBad            = slangControl_ar(@out);
+    my $nr               = @{$word_change{$FLAGS{change_type}}};
 
-    $need_all_word = 1;
-    my @isBad = slangControl_ar(@out);
-
-    if ($#{$word_change{$change_type}} > 0)
-    {
-        my $t = time();
-
-        my $nr = $#{$word_change{$change_type}};
-
-        for my $i ( 0..$#isBad ) {
-            if($isBad[$i][1] ne "")
-            {
-                my $rnd = (int rand($nr));
-                $isBad[$i][1] = $word_change{$change_type}[$rnd];
-            }
-        }
+    for my $i ( 0..$#isBad ) {
+        next if $isBad[$i][1] eq '';
+        $isBad[$i][1] = $word_change{$FLAGS{change_type}}[int rand $nr];
     }
-    else
-    {
-        for my $i ( 0..$#isBad ) {
-            if($isBad[$i][1] ne "")
-            {
-                $isBad[$i][1] = $word_change{$change_type}[0];
-            }
-        }
-    }
-
-    $need_all_word = 0;
-    setOneWord($cow);
 
     return @isBad;
 }
 
-sub slangControl_ar (@)
-{
-
+sub slangControl_ar {
     my @in = @_;
 
     my @w = ();
     my $jw = my $wo = my $w1 = my $w2 = my $w3 = my $w4 = "";
     my $jb = 0;
     my $first = 1;
-    foreach my $s (@in)
-    {
+    foreach my $s (@in) {
         $s = pre_psevdo($s);
 
         $s =~ s/^[.,\!\?]+//;
@@ -1092,18 +1065,14 @@ sub slangControl_ar (@)
 
         $s = pre_double($s);
 
-        if(length($s) < 5)
-        {
+        if(length($s) < 5) {
             $s =~ s/(.)\1{1,}/$1$1/g;
         }
 
-        if(length($s) < 3)
-        {
-            unless($jb)
-            {
+        if(length($s) < 3) {
+            unless($jb) {
                 my $f = lc($s);
-                if ($f =~ /(\bа)|(\bах)|(\bв)|(\b[вмт]ы)|(\bд[ао])|(\b[её]б)|(\bже)|(\bза)|(\bи[з]?)|(\bк)|(\bли)|(\bн[аеиу])|(\bно)|(\bпо)|(\bо[нт])|(\bс)|(\b[оэ]х)|(\bя)/)
-                {
+                if ($f =~ /(\bа)|(\bах)|(\bв)|(\b[вмт]ы)|(\bд[ао])|(\b[её]б)|(\bже)|(\bза)|(\bи[з]?)|(\bк)|(\bли)|(\bн[аеиу])|(\bно)|(\bпо)|(\bо[нт])|(\bс)|(\b[оэ]х)|(\bя)/) {
                     $wo = $s;
                     $s = pre_common($s);
                     $s = pre_double($s);
@@ -1113,14 +1082,11 @@ sub slangControl_ar (@)
                     $w3 = pre_lat_a($w2);
                     $w4 = pre_lat_b($w2);
 
-                    if ($w4 eq $w3)
-                    {
+                    if ($w4 eq $w3) {
                         $w4 = "";
-                        if ($w3 eq $w2)
-                        {
+                        if ($w3 eq $w2) {
                             $w3 = "";
-                            if ($w2 eq $w1)
-                            {
+                            if ($w2 eq $w1) {
                                 $w2 = "";
                             }
                         }
@@ -1132,10 +1098,8 @@ sub slangControl_ar (@)
             $jw .= $s;
             $jb++;
         }
-        else
-        {
-            if($jb > 0)
-            {
+        else {
+            if($jb > 0) {
                 $wo = $jw;
                 my $s = pre_common($wo);
                 $s = pre_double($s);
@@ -1145,14 +1109,11 @@ sub slangControl_ar (@)
                 $w3 = pre_lat_a($w2);
                 $w4 = pre_lat_b($w2);
 
-                if ($w4 eq $w3)
-                {
+                if ($w4 eq $w3) {
                     $w4 = "";
-                    if ($w3 eq $w2)
-                    {
+                    if ($w3 eq $w2) {
                         $w3 = "";
-                        if ($w2 eq $w1)
-                        {
+                        if ($w2 eq $w1) {
                             $w2 = "";
                         }
                     }
@@ -1171,14 +1132,11 @@ sub slangControl_ar (@)
             $w3 = pre_lat_a($w2);
             $w4 = pre_lat_b($w2);
 
-            if ($w4 eq $w3)
-            {
+            if ($w4 eq $w3) {
                 $w4 = "";
-                if ($w3 eq $w2)
-                {
+                if ($w3 eq $w2) {
                     $w3 = "";
-                    if ($w2 eq $w1)
-                    {
+                    if ($w2 eq $w1) {
                         $w2 = "";
                     }
                 }
@@ -1188,8 +1146,7 @@ sub slangControl_ar (@)
         }
     }
 
-    if($jb)
-    {
+    if($jb) {
         $wo = $jw;
         my $s = pre_common($wo);
         $s = pre_double($s);
@@ -1198,14 +1155,11 @@ sub slangControl_ar (@)
         $w3 = pre_lat_a($w2);
         $w4 = pre_lat_b($w2);
 
-        if ($w4 eq $w3)
-        {
+        if ($w4 eq $w3) {
             $w4 = "";
-            if ($w3 eq $w2)
-            {
+            if ($w3 eq $w2) {
                 $w3 = "";
-                if ($w2 eq $w1)
-                {
+                if ($w2 eq $w1) {
                     $w2 = "";
                 }
             }
@@ -1216,47 +1170,23 @@ sub slangControl_ar (@)
     return sC_ar(@w);
 }
 
-# Загружает новый словарь
-sub slangLoadDict ( $ ; $ )
-{
-    my ($file,$add) = @_;
-    if(-e $file) {open(F,$file) or die}
-    else {return}
-
-    %hslang = () if (defined($add) && $add == 1);
-
-    while (<F>) {
-        chomp;
-        my $g = $_;
-        s/^\W*?(\w).*$/$1/;
-        push(@{$hslang{$_}},$g);
-    }
-
-    close(F);
-    return 1;
+sub setOneWord {
+    $FLAGS{oneword} = $_[0] if @_;
+    return $FLAGS{oneword};
 }
 
-sub setOneWord (;$ ) {
-    my $h = shift;
+sub setChangeType {
+    my $type = shift;
+    die "Unknown type $type" if $type && !$word_change{$type};
 
-    return $oneword unless (defined($h));
-    return $oneword = $h;
+    $FLAGS{change_type} = $type;
+    return $FLAGS{change_type};
 }
-
-sub setChangeType (;$ ) {
-    my $h = shift;
-
-    return $change_type unless (defined($h));
-    return $change_type = exists $word_change{$h} ? $h : "beep";
-}
-
 
 #**************************************#
 #--------- внутренние функции ---------#
 #**************************************#
-
-sub sC_ar(@)
-{
+sub sC_ar {
     my @in = @_;
     my @isBad;
     my $mask = "";
@@ -1272,27 +1202,23 @@ sub sC_ar(@)
             $t =~ s/\./\#/g;
             $t = lc($t);
 
-            if (norm_word($t))
-            {
-                if($need_all_word)
-                {
+            if (norm_word($t)) {
+                if($FLAGS{need_all_word}) {
                     push(@isBad, [$b, ""]);
                 }
                 $isbad = 0;
                 last;
             }
 
-            foreach my $m ( keys %core_mask )
-            {
-                if ($t =~ m/$core_mask{$m}/)
-                {
+            foreach my $m ( keys %core_mask ) {
+                if ($t =~ m/$core_mask{$m}/) {
                     $mask = $m;
                     $isbad++;
                     last;
                 }
             }
 
-            next if ($oneword && $isbad);
+            next if ($FLAGS{oneword} && $isbad);
             next if ($isbad);
 
             $t =~ s/^не//;
@@ -1301,26 +1227,23 @@ sub sC_ar(@)
             next if $c eq "" || !defined $hslang{$c};
 
             for my $m (@{$hslang{$c}}) {
-                if ($t =~ m/$m/)
-                {
+                if ($t =~ m/$m/) {
                     $mask = $m;
                     $isbad++;
                     last;
                 }
             }
 
-            next if ($oneword && $isbad);
+            next if ($FLAGS{oneword} && $isbad);
 
-            if (!$isbad && $need_all_word)
-            {
+            if (!$isbad && $FLAGS{need_all_word}) {
                 push(@isBad, [$b, ""]);
             }
 
         }
 
-        if ($isbad)
-        {
-            if ($oneword) { @isBad = ($b, $mask); }
+        if ($isbad) {
+            if ($FLAGS{oneword}) { @isBad = ($b, $mask); }
             else { push(@isBad, [$b, $mask]); }
         }
 
@@ -1328,18 +1251,15 @@ sub sC_ar(@)
     return @isBad;
 }
 
-sub pre_common(@)
-{
+sub pre_common {
     my ($r) = @_;
 
-    unless (isSmailes($r)) {
+    if (!isSmailes($r)) {
         $r = lc($r);
 
         $r =~ tr/036/озб/;
         $r =~ tr/gcxyaeokhtn/дсхуаеокнтп/;
-        $r =~ tr/diz\ё/дизе/;
-
-        $r =~ tr/\©/\#/;
+        $r =~ tr/dizё/дизе/;
 
         $r =~ s/[\.\,]//g;
         $r =~ s/[\~\!\@\$\%\^\&\*\(\)\-\_\+\\\|\?\>\<\"\:\;\'\`\/]/\#/g;
@@ -1348,31 +1268,25 @@ sub pre_common(@)
     return $r;
 }
 
-sub isSmailes(@)
-{
-    my ($r) = @_;
-    my $m = 0;
+sub isSmailes {
+    my $r = shift;
 
-    foreach my $s (@smiles)
-    {
-        if ($r =~ m/^$s$/)
-        {
-            $m++;
-            last;
-        }
+    foreach my $s (@smiles) {
+        return 1 if $r =~ m/^$s$/;
     }
 
-    return $m;
+    return 0;
 }
 
-sub pre_psevdo(@)
-{
-    my ($r) = @_;
+sub pre_psevdo {
+    my $r = shift;
 
     $r =~ s/\/\\/л/g;       # /\
     $r =~ s/\>\</х/g;       # ><
     $r =~ s/\}\{/х/g;       # }{
     $r =~ s/\)\(/х/g;       # )(
+    $r =~ s/\>\|\</ж/g;     # >|<
+    $r =~ s/\}\|\{/ж/g;     # }|{
     $r =~ s/\|\/\|/и/g;     # |/|
     $r =~ s/\`\//у/g;       # `/
     $r =~ s/\-\//у/g;       # -/
@@ -1380,7 +1294,11 @@ sub pre_psevdo(@)
     $r =~ s/b\|/ы/g;        # b|
     $r =~ s/bI/ы/g;         # bI
 
-    $r =~ s/&[Et][Uu][Mm][Ll];/е/g;
+    $r =~ s/&[Ee][Uu][Mm][Ll];/е/g;
+    $r =~ s/&[Uu][Uu][Mm][Ll];/и/g;
+    $r =~ s/&[Aa][Uu][Mm][Ll];/а/g;
+    $r =~ s/&[Oo][Uu][Mm][Ll];/о/g;
+    $r =~ s/&[Yy][Uu][Mm][Ll];/у/g;
     $r =~ s/&#203;/е/g;
     $r =~ s/&[Cc][Ee][Nn][Tt];/с/g;
     $r =~ s/&#162;/с/g;
@@ -1390,58 +1308,48 @@ sub pre_psevdo(@)
     return $r;
 }
 
-sub pre_lat_a(@)
-{
-    my ($r) = @_;
+sub pre_lat_a {
+    my $r = shift;
 
     $r =~ tr/bmupz/вмирз/;
-
     return $r;
 }
 
-sub pre_lat_b(@)
-{
-    my ($r) = @_;
+sub pre_lat_b {
+    my $r = shift;
 
     $r =~ tr/bmupz/ьтупя/;
-
     return $r;
 }
 
-sub pre_double(@)
-{
-    my ($r) = @_;
+sub pre_double {
+    my $r = shift;
 
     $r =~ s/([^\#\.])\1{2,}/$1$1/g;
     $r =~ s/([^нс\#])\1{1,}/$1/g;
 
     $r =~ s/[\#]+$// unless $r =~ /^\#+$/ || length($r) < 6;
-    $r =~ s/^[\#]// unless $r =~ /^\#+$/ || length($r) < 6;
+    $r =~ s/^[\#]//  unless $r =~ /^\#+$/ || length($r) < 6;
 
     return $r;
 }
 
-sub norm_word(@)
-{
-    my ($t) = @_;
-    my $god = 0;
-
+sub norm_word {
+    my $t = shift;
     my $c = substr($t, 0, 1);
-    if (defined $norm_word{$c})
-    {
-        for my $s (@{$norm_word{$c}}) {
-            if ($t =~ m/$s/) {
-                $god = 1;
-                last;
-            }
-        }
+
+    return 0 unless defined $norm_word{$c};
+
+    for my $s (@{$norm_word{$c}}) {
+        return 1 if $t =~ m/$s/;
     }
-    return $god;
+
+    return 0;
 }
 
 1;
+
 __END__
-# Below is the stub of documentation for your module. You better edit it!
 
 =head1 NAME
 
